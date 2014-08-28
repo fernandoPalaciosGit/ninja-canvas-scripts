@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>calcular los frames por segundo del juego</title>
+</head>
+<body>
+		<div class="canvasFrame">
+			<canvas></canvas>
+		</div>
+
+<script>
+	'use strict'; // forzamos a qu es navegador reconozca buenas practicas
+
+	// variable global, estandarzando en todos los navegadores la funcion de frames
+	window.requestAminFrame = (function (){
+		return	window.requestAnimationFrame ||			//standart
+					window.webkitRequestAnimationFrame ||	//Chrome, Safari, Mobiles
+        			window.mozRequestAnimationFrame ||		//Firefox
+        			// frame every 17 milsec, update frame rate around of requestAnimationFrame
+        			function( callback ){ window.setTimeout(callback, 17); };
+	}());
+
+	var	lastUpdate = 0,
+			FPS = 0,
+			frames = 0,
+			acumDelta = 0,
+			canvas, ctx,
+			x = 0, y = 0;
+
+	var frameset = function (){
+		// recursividad de frameset
+		window.requestAminFrame( frameset );
+
+		/* deltaTime: milisegundos que han pasado despues del ultimo frame*/
+		var	now = + new Date,
+				deltaTime = ( now - lastUpdate) / 1000;
+		
+		// el primer frameset (lastUpdate = 0) provocaria que el deltaTime fuera muy elevado
+		// si el tiempo delta es mayor a un segundo, su valor será descartado. Esto también sirve para prevenir valores no deseados en caso que el usuario salga de la pestaña actual por un momento, o la computadora se cuelgue por algunos segundos.
+		if ( deltaTime > 1 ) deltaTime = 0;
+
+		// recuperamos el tiempo de ahora para utilizarlo en el siguiente frameset
+		lastUpdate = now;
+
+		frames++; // numero de ciclos
+		acumDelta += deltaTime; // acumulacion de ciclos
+		if ( acumDelta >= 1 ) { // cuando la suma de ciclos sea un segundo (aprox)
+
+			// reseteamos las variables de acumulacion
+			FPS = frames;
+			frames = 0;
+			acumDelta -= 1;
+		}
+
+		moveAsset( (FPS * deltaTime) );
+		paintAsset(ctx);
+	};
+
+	var moveAsset = function (frameSteps){
+		// x += 10; //movemos el asset segun pixeles estaticos (@ 2px)
+		x += (10 * frameSteps); // garantizado que siempre se desplazará 10px pixeles por cada frame, independiente de los cuadros por segundo en cada dispositivo.
+
+		y = canvas.height / 2;
+		if( x > canvas.width ) x = 0;
+	};
+
+	// el contexto del canvas mejor por valor (parametro), que no por referencia
+	var paintAsset = function (ctx){
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, canvas.width, canvas.height); //canvas background
+
+		ctx.fillStyle = '#0f0';
+		ctx.fillRect( x, y, 10, 10); //asset
+
+		ctx.fillStyle = '#fff';
+		ctx.fillText('FPS: '+FPS, 10, 12); //text
+		ctx.fillText('steps FPS: '+acumDelta, 10, 24); //text
+	};
+	
+	// funcion ejecutada en ultimo lugar
+	;(function (w, d){
+		w.canvas = d.querySelector('.canvasFrame canvas');
+		w.ctx = w.canvas.getContext('2d');
+		frameset();
+	}( window, document ));
+</script>
+</body>
+</html>
