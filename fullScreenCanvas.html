@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>adaptar canvas a pantalla completa</title>
+	<style>
+		.canvasFrame{
+			text-align: center;
+		}
+		.canvasFrame .sizeCanvas{
+			position: relative;
+			z-index: 20;
+		}
+
+		.canvasFrame canvas{
+			position: relative;
+			z-index: 10;
+			background-color: blue;
+			width: 300px;
+			height: 400px;
+		}
+	</style>
+</head>
+<body>
+	<p>Escalar el elemento significa no solo aumentar el tamaño del lienzo (elemento &lt;canvas&gt;),<br>
+		sino tambien aumentar el tamaño de todos los elementos dibujados dentro de él.
+	</p>
+	<div>
+		<p><b class="lead">Implementacion de <em>escalado</em> de canvas</b></p>
+		<ul>
+			<li>Marcar el estilo <i class="idea">inline</i> del elemento <i class="idea">&lt;canvas&gt; <small>(servira para las dimensiones del contexto)</small></i><br>
+<pre>
+&lt;canvas width="300" height="400"&gt;&lt;/canvas&gt;
+</pre>
+			</li>
+			<li>Marcar el estilo <i class="idea">CSS</i> del elemento <i class="idea">&lt;canvas&gt;</i>, <strong>el mismo que el inline</strong>
+<pre>
+background-color: blue;
+width: 300px;
+height: 400px;
+/* Hasta aqui, tanto la el estilo como la dimension del contexto de canvas es la misma */
+</pre>
+			</li>
+			<li> Con javascript escalamos en funcion de las dimensiones del canvas, seteamos el CSS a posicion fija</li>
+		</ul>
+	</div>
+	<div class="canvasFrame">
+		<input type="button" class="sizeCanvas" data-is-full-screen="false" value="Pantalla Completa" /><br>
+		<canvas width="300" height="400">[Canvas not supported by your browser]</canvas>
+	</div>
+	
+<script>
+	// canvas standardize shim()
+	window.requestAminFrame = (function (){
+		return	window.requestAnimationFrame ||
+					window.webkitRequestAnimationFrame ||
+					window.mozRequestAnimationFrame ||
+					function( callback ){ window.setTimeout(callback, 17); };
+	}());
+
+	var FS = {
+		lastUpdate : 0,
+		FPS : 0,
+		frames : 0,
+		acumDelta : 0
+	};
+
+	var GameInit = {
+		canvas : null, ctx: null,
+		x: 0, y: 0
+	};
+
+	var setCanvasFullScreen = function (c){
+		//escala adecuada dependiendo de las dimensiones del canvas
+		var	w = window.innerWidth / c.width,
+				h = window.innerHeight / c.height,
+				scale = Math.min(h,w);
+
+		// asignar ancho y alto a nuestro canvas f/ de la escala
+		c.style.width = (c.width*scale)+'px';
+      c.style.height = (c.height*scale)+'px';
+
+      // centramos el canvas y lo posicionanamos en fixed
+		c.style.position = 'fixed';
+		c.style.left = '50%';
+		c.style.top = '50%';
+		c.style.marginLeft =- (c.width*scale)/2+'px';
+		c.style.marginTop =- (c.height*scale)/2+'px';
+	};
+
+	var setCanvasNormalScreen = function (c){
+		c.style.width = '300px';
+		c.style.height = '400px';
+		c.style.position = 'relative';
+		c.style.left = '';
+		c.style.top = '';
+		c.style.marginLeft = '';
+		c.style.marginTop = '';
+	};
+
+
+	var moveAsset = function (frameSteps){
+		//se desplazará 10px pixeles por cada frame
+		GameInit.x += (2 * frameSteps);
+		GameInit.y = GameInit.canvas.height / 2;
+		if( GameInit.x > GameInit.canvas.width ) GameInit.x = 0;
+	};
+
+	// el contexto del canvas mejor por valor (parametro), que no por referencia
+	var paintAsset = function (ctx){
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, GameInit.canvas.width, GameInit.canvas.height); //canvas background
+		ctx.fillStyle = '#0f0';
+		ctx.fillRect( GameInit.x, GameInit.y, 10, 10); //asset
+	};
+
+	var frameset = function (){
+		window.requestAminFrame(frameset); //recursividad de frames optimizada
+
+		//  calvular los FPS
+		var	now = + new Date,
+				deltaTime = ( now - FS.lastUpdate) / 1000;
+		
+		if ( deltaTime > 1 ) deltaTime = 0;
+		FS.lastUpdate = now;
+
+		FS.frames++;
+		FS.acumDelta += deltaTime;
+		if ( FS.acumDelta > 1 ) {
+			FS.FPS = FS.frames;
+			FS.frames = 0;
+			FS.acumDelta -= 1;
+		}
+
+		moveAsset( (FS.FPS * deltaTime) );
+		paintAsset(GameInit.ctx);
+	};
+
+	;( function (w, d, GI){
+		GI.canvas = d.querySelector('.canvasFrame canvas');
+		GI.ctx = GI.canvas.getContext('2d');
+		
+		d.querySelector('.canvasFrame .sizeCanvas').addEventListener('click', function (evClick){
+			if( this.dataset.isFullScreen === "false" ){
+				this.dataset.isFullScreen = "true";
+				this.value = 'pantalla normal';
+				setCanvasFullScreen(GI.canvas);
+			} else {
+				this.dataset.isFullScreen = "false";
+				this.value = 'pantalla completa';
+				setCanvasNormalScreen(GI.canvas);
+			}
+		}, false);
+
+		frameset();
+	}( window, document, GameInit));
+</script>
+</body>
+</html>
